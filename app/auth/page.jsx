@@ -53,8 +53,10 @@ export default function AuthPage() {
       }
 
       // تكوين Google OAuth
+      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "454676723375-89i4k81vr2dd9qu504va3kk0o74qsip6.apps.googleusercontent.com";
+      
       window.google.accounts.id.initialize({
-        client_id: "454676723375-5gdpd8shc5e06e8fp38d9p810smffpfc.apps.googleusercontent.com",
+        client_id: clientId,
         callback: handleGoogleCallback,
         ux_mode: 'popup',
         auto_select: false
