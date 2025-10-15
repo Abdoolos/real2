@@ -52,8 +52,8 @@ export default function AuthPage() {
         await loadGoogleAPI();
       }
 
-      // تكوين Google OAuth
-      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "454676723375-89i4k81vr2dd9qu504va3kk0o74qsip6.apps.googleusercontent.com";
+      // تكوين Google OAuth  
+      const clientId = "454676723375-89i4k81vr2dd9qu504va3kk0o74qsip6.apps.googleusercontent.com";
       
       window.google.accounts.id.initialize({
         client_id: clientId,

@@ -95,7 +95,7 @@ export default function GoogleSignInPage() {
         throw new Error('Google API غير متوفر');
       }
 
-      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "454676723375-89i4k81vr2dd9qu504va3kk0o74qsip6.apps.googleusercontent.com";
+      const clientId = "454676723375-89i4k81vr2dd9qu504va3kk0o74qsip6.apps.googleusercontent.com";
       
       console.log('🔧 تهيئة Google OAuth مع Client ID:', clientId.substring(0, 20) + '...');
       
@@ -155,7 +155,7 @@ export default function GoogleSignInPage() {
   const handleAlternativeGoogleSignIn = () => {
     try {
       setError('');
-      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "454676723375-89i4k81vr2dd9qu504va3kk0o74qsip6.apps.googleusercontent.com";
+      const clientId = "454676723375-89i4k81vr2dd9qu504va3kk0o74qsip6.apps.googleusercontent.com";
       const redirectUri = window.location.origin + '/auth/google-callback';
       
       const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
