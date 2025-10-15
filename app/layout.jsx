@@ -19,7 +19,8 @@ import UserDataInitializer from '@/components/user/UserDataInitializer';
 import SubscriptionBanner from '@/components/SubscriptionBanner';
 import ErrorBoundary from '@/components/utils/errorBoundary';
 import { getEnvironmentInfo } from '@/components/utils/envUtils';
-import AuthProvider from '@/../../components/AuthProvider';
+import { ClerkProvider } from '@clerk/nextjs'
+import { arSA } from '@clerk/localizations'
 
 // Import styles
 import '../src/index.css';
@@ -626,15 +627,15 @@ LayoutContent.propTypes = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="ar" dir="rtl">
-      <body>
-        <ErrorBoundary>
-          <AuthProvider>
+    <ClerkProvider localization={arSA}>
+      <html lang="ar" dir="rtl">
+        <body>
+          <ErrorBoundary>
             <LayoutContent>{children}</LayoutContent>
-          </AuthProvider>
-        </ErrorBoundary>
-      </body>
-    </html>
+          </ErrorBoundary>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
 
