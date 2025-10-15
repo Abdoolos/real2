@@ -627,7 +627,15 @@ LayoutContent.propTypes = {
 
 export default function RootLayout({ children }) {
   return (
-    <ClerkProvider localization={arSA}>
+    <ClerkProvider 
+      localization={arSA}
+      appearance={{
+        elements: {
+          footer: "hidden",
+          footerAction: "hidden"
+        }
+      }}
+    >
       <html lang="ar" dir="rtl">
         <body>
           <ErrorBoundary>

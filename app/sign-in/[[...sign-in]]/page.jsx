@@ -18,6 +18,8 @@ export default function SignInPage() {
             elements: {
               rootBox: "mx-auto",
               card: "shadow-2xl border-emerald-200",
+              footer: "hidden",
+              footerAction: "hidden"
             }
           }}
           routing="path"
