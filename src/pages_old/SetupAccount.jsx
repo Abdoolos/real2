@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession, signIn } from 'next-auth/react';
+import { useUser, useClerk } from '@clerk/nextjs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -13,21 +13,16 @@ import { CURRENCIES } from '@/components/utils/currencyUtils';
 import { toast } from 'sonner';
 
 export default function SetupAccount() {
-  const { data: session, status } = useSession();
+  const { user, isLoaded } = useUser();
+  const { openSignIn } = useClerk();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [selectedCurrency, setSelectedCurrency] = useState('SAR');
 
-  const handleGoogleSignIn = async () => {
-    try {
-      await signIn('google', { 
-        callbackUrl: '/setup-account',
-        redirect: true 
-      });
-    } catch (error) {
-      console.error('Error signing in with Google:', error);
-      toast.error('حدث خطأ أثناء تسجيل الدخول بجوجل');
-    }
+  const handleGoogleSignIn = () => {
+    openSignIn({
+      redirectUrl: '/setup-account',
+    });
   };
 
   const handleContinue = () => {
@@ -37,7 +32,7 @@ export default function SetupAccount() {
     router.push('/dashboard');
   };
 
-  if (status === 'loading') {
+  if (!isLoaded) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
@@ -46,7 +41,7 @@ export default function SetupAccount() {
   }
 
   // إذا لم يسجل دخول، اعرض صفحة تسجيل الدخول بجوجل
-  if (!session) {
+  if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-amber-50 flex items-center justify-center p-4">
         <motion.div
@@ -146,7 +141,7 @@ export default function SetupAccount() {
               <Wallet className="w-8 h-8 text-white" />
             </div>
             <CardTitle className="text-2xl font-bold text-emerald-800">
-              أهلاً {session.user.name}! 👋
+              أهلاً {user?.fullName || user?.firstName}! 👋
             </CardTitle>
             <p className="text-emerald-600 mt-2">
               اختر عملتك المفضلة للبدء
@@ -161,16 +156,16 @@ export default function SetupAccount() {
                 <span className="font-medium text-emerald-800">معلوماتك</span>
               </div>
               <div className="flex items-center gap-3">
-                {session.user.image && (
+                {user?.imageUrl && (
                   <img 
-                    src={session.user.image} 
-                    alt={session.user.name}
+                    src={user.imageUrl} 
+                    alt={user.fullName || user.firstName}
                     className="w-12 h-12 rounded-full border-2 border-emerald-200"
                   />
                 )}
                 <div className="text-sm text-emerald-700">
-                  <p className="font-semibold">{session.user.name}</p>
-                  <p className="text-xs">{session.user.email}</p>
+                  <p className="font-semibold">{user?.fullName || user?.firstName}</p>
+                  <p className="text-xs">{user?.primaryEmailAddress?.emailAddress}</p>
                 </div>
               </div>
             </div>
