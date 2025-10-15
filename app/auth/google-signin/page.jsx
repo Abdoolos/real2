@@ -95,7 +95,7 @@ export default function GoogleSignInPage() {
         throw new Error('Google API غير متوفر');
       }
 
-      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "454676723375-5gdpd8shc5e06e8fp38d9p810smffpfc.apps.googleusercontent.com";
+      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "454676723375-89i4k81vr2dd9qu504va3kk0o74qsip6.apps.googleusercontent.com";
       
       console.log('🔧 تهيئة Google OAuth مع Client ID:', clientId.substring(0, 20) + '...');
       
