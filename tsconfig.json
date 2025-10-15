@@ -48,7 +48,7 @@
         "./src/hooks/*"
       ],
       "@/lib/*": [
-        "./src/lib/*"
+        "./lib/*"
       ]
     },
     "target": "ES2017",
