@@ -10,6 +10,7 @@ const publicPaths = [
   '/support',
   '/privacy-policy',
   '/terms-of-service',
+  '/login',
   '/auth/signin',
   '/auth/signup',
   '/auth/google-signin',

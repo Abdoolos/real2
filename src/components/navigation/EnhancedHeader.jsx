@@ -38,29 +38,29 @@ const expenseMenuItems = [
 const reportsMenuItems = [
   { title: "التقرير الشهري", url: createPageUrl("MonthlyReport"), icon: FileText, emoji: "📄", status: "ready" },
   { title: "الإحصائيات", url: createPageUrl("Analytics"), icon: BarChart3, emoji: "📈", status: "ready" },
-  { title: "تقرير العائلة", url: createPageUrl("FamilyReport"), icon: PieChart, emoji: "📊", status: "basic" }
+  { title: "تقرير العائلة", url: createPageUrl("FamilyReport"), icon: PieChart, emoji: "📊", status: "ready" }
 ];
 
 const managementMenuItems = [
   { title: "إدارة الفئات", url: createPageUrl("ManageCategories"), icon: Tags, emoji: "🏷️", status: "ready" },
-  { title: "إدارة الميزانيات", url: createPageUrl("ManageBudgets"), icon: Target, emoji: "🎯", status: "basic" },
-  { title: "إدارة المناسبات", url: createPageUrl("ManageEvents"), icon: CalendarPlus, emoji: "📅", status: "basic" },
-  { title: "الدخل العائلي", url: createPageUrl("FamilyIncome"), icon: Wallet, emoji: "💰", status: "basic" }
+  { title: "إدارة الميزانيات", url: createPageUrl("ManageBudgets"), icon: Target, emoji: "🎯", status: "ready" },
+  { title: "إدارة المناسبات", url: createPageUrl("ManageEvents"), icon: CalendarPlus, emoji: "📅", status: "ready" },
+  { title: "الدخل العائلي", url: createPageUrl("FamilyIncome"), icon: Wallet, emoji: "💰", status: "ready" }
 ];
 
 const accountMenuItems = [
-  { title: "إدارة الحساب", url: createPageUrl("Account"), icon: Settings, emoji: "⚙️", status: "basic" },
+  { title: "إدارة الحساب", url: createPageUrl("Account"), icon: Settings, emoji: "⚙️", status: "ready" },
   { title: "عنّا", url: createPageUrl("About"), icon: Heart, emoji: "💝", status: "ready" },
   { title: "الأسعار", url: createPageUrl("Pricing"), icon: Gem, emoji: "💎", status: "ready" },
 ];
 
 const secondaryNavItems = [
-  { title: "الخطة", url: createPageUrl("FinancialPlanner"), icon: ClipboardList, emoji: "📊", status: "basic" },
+  { title: "الخطة", url: createPageUrl("FinancialPlanner"), icon: ClipboardList, emoji: "📊", status: "ready" },
   { 
-    title: "المساعد الذكي", 
+    title: "الأسئلة الشائعة", 
     url: createPageUrl("FinancialChatbot"), 
-    icon: Sparkles, 
-    emoji: "🤖", 
+    icon: HelpCircle, 
+    emoji: "❓", 
     status: "ready"
   }
 ];
@@ -94,7 +94,6 @@ function EnhancedNavLink({ item, pathname, onClick }) {
       <span className="font-medium text-sm">{item.title}</span>
       
       {isDisabled && <Lock className="w-3 h-3 text-gray-400 ml-1" />}
-      {isBasic && <span className="text-xs bg-amber-200 text-amber-800 px-1 rounded ml-1">تجريبي</span>}
     </motion.div>
   );
 
@@ -166,22 +165,6 @@ function EnhancedDropdownMenu({ title, items, icon: Icon, pathname }) {
           </DropdownMenuItem>
         ))}
         
-        {/* فاصل إذا كان هناك عناصر تجريبية */}
-        {basicItems.length > 0 && readyItems.length > 0 && <DropdownMenuSeparator />}
-        
-        {/* العناصر التجريبية */}
-        {basicItems.map((item) => (
-          <DropdownMenuItem key={item.title} asChild>
-            <Link href={item.url} className="flex items-center gap-3 px-3 py-2 w-full">
-              <item.icon className="w-4 h-4 text-amber-500" />
-              <span className="flex items-center gap-2">
-                {item.title}
-                <span className="text-xs bg-amber-200 text-amber-800 px-1 rounded">تجريبي</span>
-              </span>
-            </Link>
-          </DropdownMenuItem>
-        ))}
-        
         {/* فاصل إذا كان هناك عناصر معطلة */}
         {disabledItems.length > 0 && (readyItems.length > 0 || basicItems.length > 0) && <DropdownMenuSeparator />}
         
@@ -229,7 +212,6 @@ function EnhancedMobileNavLink({ item, pathname, onClose }) {
       <span className="text-xl">{item.emoji}</span>
       <div className="flex-1">
         <span className="font-medium text-lg">{item.title}</span>
-        {isBasic && <div className="text-xs text-amber-600 mt-1">نسخة تجريبية</div>}
         {isDisabled && <div className="text-xs text-gray-500 mt-1">قريباً</div>}
       </div>
       {isDisabled && <Lock className="w-4 h-4 text-gray-400" />}

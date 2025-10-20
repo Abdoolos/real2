@@ -13,25 +13,45 @@ import { motion } from 'framer-motion';
 export default function ExpensesListPage() {
   const router = useRouter();
   const [expenses, setExpenses] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
 
   useEffect(() => {
-    loadExpenses();
+    loadData();
   }, []);
 
-  const loadExpenses = async () => {
+  const loadData = async () => {
     try {
       const response = await fetch('/api/expenses');
+      console.log('📡 Response status:', response.status);
+      
       if (response.ok) {
-        const data = await response.json();
-        setExpenses(Array.isArray(data) ? data : []);
+        const result = await response.json();
+        console.log('📦 Raw API response:', result);
+        
+        const data = result.data?.expenses || result.data || result;
+        console.log('📊 Extracted expenses:', data);
+        console.log('📊 Is array?', Array.isArray(data));
+        console.log('📊 Length:', data?.length);
+        
+        // تحويل البيانات لإضافة category من subcategory
+        const expensesWithCategory = Array.isArray(data) ? data.map(expense => ({
+          ...expense,
+          category: expense.subcategory?.category?.name || 'غير محدد'
+        })) : [];
+        
+        console.log('✅ Expenses with category:', expensesWithCategory);
+        setExpenses(expensesWithCategory);
       } else {
+        const errorText = await response.text();
+        console.error('❌ API Error:', response.status, errorText);
         setExpenses([]);
       }
     } catch (error) {
-      console.error('Error loading expenses:', error);
+      console.error('💥 Error loading expenses:', error);
       setExpenses([]);
     } finally {
       setLoading(false);

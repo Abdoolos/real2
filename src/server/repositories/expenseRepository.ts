@@ -11,6 +11,12 @@ export interface ExpenseWithDetails extends Expense {
   subcategory?: {
     id: string;
     name: string;
+    category: {
+      id: string;
+      name: string;
+      icon: string;
+      color: string;
+    };
   } | null;
   user: {
     id: string;
@@ -61,6 +67,14 @@ export class ExpenseRepository {
           select: {
             id: true,
             name: true,
+            category: {
+              select: {
+                id: true,
+                name: true,
+                icon: true,
+                color: true,
+              },
+            },
           },
         },
         user: {
@@ -70,7 +84,7 @@ export class ExpenseRepository {
           },
         },
       },
-    });
+    }) as ExpenseWithDetails | null;
   }
 
   // Get expenses with filters and pagination
@@ -128,6 +142,14 @@ export class ExpenseRepository {
             select: {
               id: true,
               name: true,
+              category: {
+                select: {
+                  id: true,
+                  name: true,
+                  icon: true,
+                  color: true,
+                },
+              },
             },
           },
           user: {
@@ -140,8 +162,14 @@ export class ExpenseRepository {
         orderBy: { [orderBy]: orderDirection },
         skip,
         take: limit,
+      }).catch(error => {
+        console.error('Prisma query error:', error);
+        throw error;
       }),
-      prisma.expense.count({ where }),
+      prisma.expense.count({ where }).catch(error => {
+        console.error('Prisma count error:', error);
+        throw error;
+      }),
     ]);
 
     return {
@@ -203,6 +231,14 @@ export class ExpenseRepository {
           select: {
             id: true,
             name: true,
+            category: {
+              select: {
+                id: true,
+                name: true,
+                icon: true,
+                color: true,
+              },
+            },
           },
         },
         user: {
@@ -213,7 +249,7 @@ export class ExpenseRepository {
         },
       },
       orderBy: { date: 'desc' },
-    });
+    }) as ExpenseWithDetails[];
   }
 
   // Get total expenses by category for a period

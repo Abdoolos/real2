@@ -135,11 +135,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create expense
+    // Create expense - استخدام category من subcategory
     const expense = await expenseRepository.create({
       amount: amount as any,
       description,
-      categoryId,
+      categoryId, // سيتم ملؤه تلقائياً من subcategory
       subcategoryId: subcategoryId || null,
       date: new Date(date),
       notes: notes || null,

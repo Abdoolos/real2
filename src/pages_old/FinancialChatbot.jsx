@@ -83,13 +83,12 @@ export default function FinancialChatbot() {
         animate={{ opacity: 1, y: 0 }}
         className="text-center mb-8"
       >
-        <div className="flex items-center justify-center gap-3 mb-4">
-          <div className="w-12 h-12 bg-gradient-to-r from-emerald-500 to-blue-500 rounded-full flex items-center justify-center shadow-lg">
-            <Bot className="w-6 h-6 text-white" />
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <div className="w-12 h-12 bg-gradient-to-r from-emerald-500 to-blue-500 rounded-full flex items-center justify-center shadow-lg">
+              <HelpCircle className="w-6 h-6 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-emerald-800">الأسئلة الشائعة</h1>
           </div>
-          <h1 className="text-3xl font-bold text-emerald-800">مساعد ريال مايند</h1>
-          <Sparkles className="w-6 h-6 text-yellow-500" />
-        </div>
         <p className="text-emerald-600 max-w-2xl mx-auto">
           اختر سؤالك من القائمة أو ابحث عن إجابة لسؤالك
         </p>
@@ -231,15 +230,15 @@ export default function FinancialChatbot() {
           <Card className="rtl-shadow bg-white/95 backdrop-blur-sm border-emerald-100 h-[700px] flex flex-col">
             <CardHeader className="pb-3 flex-shrink-0">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-gradient-to-r from-emerald-500 to-blue-500 rounded-full flex items-center justify-center">
-                    <Bot className="w-4 h-4 text-white" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-gradient-to-r from-emerald-500 to-blue-500 rounded-full flex items-center justify-center">
+                      <HelpCircle className="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-emerald-800 text-base">الأسئلة الشائعة</CardTitle>
+                      <p className="text-xs text-emerald-600">اختر سؤالك للحصول على الإجابة</p>
+                    </div>
                   </div>
-                  <div>
-                    <CardTitle className="text-emerald-800 text-base">مساعد ريال مايند</CardTitle>
-                    <p className="text-xs text-emerald-600">جاهز للإجابة على أسئلتك</p>
-                  </div>
-                </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="border-emerald-200 text-emerald-700">
                     {messages.length / 2} محادثة
@@ -273,7 +272,7 @@ export default function FinancialChatbot() {
                       <Bot className="w-10 h-10 text-white" />
                     </div>
                     <h3 className="text-xl font-bold text-emerald-800 mb-2">
-                      مرحباً بك في مساعد ريال مايند! 👋
+                      مرحباً بك في صفحة الأسئلة الشائعة! 👋
                     </h3>
                     <p className="text-emerald-600 mb-6">
                       اختر أي سؤال من القائمة على اليمين للحصول على الإجابة

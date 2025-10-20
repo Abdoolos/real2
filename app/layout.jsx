@@ -60,7 +60,7 @@ const accountMenuItems = [
 
 const secondaryNavItems = [
   { title: "الخطة", url: createPageUrl("FinancialPlanner"), icon: ClipboardList, emoji: "📊" },
-  { title: "المساعد الذكي", url: createPageUrl("FinancialChatbot"), icon: Sparkles, emoji: "🤖" }
+  { title: "الأسئلة الشائعة", url: createPageUrl("FinancialChatbot"), icon: HelpCircle, emoji: "❓" }
 ];
 
 function NavLink({ item, pathname }) {
@@ -250,13 +250,6 @@ function LayoutContent({ children }) {
             <Toaster richColors position="top-center" />
             <UserDataInitializer />
             <SubscriptionBanner />
-            
-            {/* إضافة معلومات البيئة في بيئة التطوير */}
-            {envInfo?.environment === 'development' && envInfo?.isPreview && (
-              <div className="bg-yellow-100 border-yellow-200 text-yellow-800 text-center py-1 text-xs">
-                🚧 بيئة المعاينة (Preview) - بعض الميزات قد لا تعمل كما هو متوقع في الإنتاج
-              </div>
-            )}
 
             <style>{`
               @media print {
@@ -604,13 +597,15 @@ function LayoutContent({ children }) {
                   </div>
 
                   {/* Copyright */}
-                  <div className="border-t border-emerald-100 mt-8 pt-6 text-center">
-                    <p className="text-emerald-600 text-sm">
-                      © 2025 ريال مايند - جميع الحقوق محفوظة
-                    </p>
-                    <p className="text-emerald-500 text-xs mt-1">
-                      تم التطوير بتقنيات حديثة لخدمة العائلات السعودية
-                    </p>
+                  <div className="border-t border-emerald-100 mt-8 pt-6">
+                    <div className="text-center space-y-2">
+                      <p className="text-emerald-600 text-sm">
+                        © 2025 ريال مايند - جميع الحقوق محفوظة
+                      </p>
+                      <p className="text-emerald-700 text-sm font-medium">
+                        Created by Nexify CRM Systems LLC
+                      </p>
+                    </div>
                   </div>
                 </div>
               </footer>

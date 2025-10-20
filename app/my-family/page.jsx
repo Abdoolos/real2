@@ -16,88 +16,162 @@ import {
   Edit2, 
   Trash2,
   Shield,
-  User
+  User,
+  Sparkles,
+  Heart,
+  Lock,
+  BarChart3
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export default function MyFamilyPage() {
-  const [familyData, setFamilyData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [showInviteForm, setShowInviteForm] = useState(false);
+// مكون الشاشة الترحيبية لإنشاء عائلة جديدة
+function CreateFamilyWelcome() {
+  const [familyName, setFamilyName] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
 
-  useEffect(() => {
-    loadFamilyData();
-  }, []);
-
-  const loadFamilyData = async () => {
+  const handleCreateFamily = async () => {
+    if (!familyName.trim()) return;
+    
+    setIsCreating(true);
     try {
-      const response = await fetch('/api/family');
+      const response = await fetch('/api/family', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: familyName })
+      });
+      
       if (response.ok) {
-        const data = await response.json();
-        setFamilyData(data);
+        window.location.reload();
       }
     } catch (error) {
-      console.error('Error loading family data:', error);
+      console.error('Error creating family:', error);
     } finally {
-      setLoading(false);
+      setIsCreating(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
-      </div>
-    );
-  }
+  return (
+    <div className="container mx-auto p-6">
+      <div className="min-h-[80vh] flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="max-w-2xl w-full"
+        >
+          <Card className="border-2 border-emerald-200 shadow-2xl">
+            <CardContent className="p-8 md:p-12">
+              {/* الأيقونة */}
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                className="flex justify-center mb-8"
+              >
+                <div className="w-20 h-20 bg-gradient-to-r from-emerald-500 to-amber-500 rounded-full flex items-center justify-center shadow-lg">
+                  <Users className="w-10 h-10 text-white" />
+                </div>
+              </motion.div>
 
-  // Mock data
-  const mockData = familyData || {
-    family: {
-      id: 1,
-      name: 'عائلة العوضي',
-      inviteCode: 'FAM-AWD123',
-      createdAt: '2024-01-15'
-    },
-    members: [
-      {
-        id: 1,
-        name: 'أحمد العوضي',
-        email: 'ahmed@example.com',
-        role: 'admin',
-        avatar: '/avatars/ahmed.jpg',
-        joinedAt: '2024-01-15',
-        isCurrentUser: true
-      },
-      {
-        id: 2,
-        name: 'فاطمة العوضي',
-        email: 'fatima@example.com',
-        role: 'admin',
-        avatar: '/avatars/fatima.jpg',
-        joinedAt: '2024-01-15'
-      },
-      {
-        id: 3,
-        name: 'محمد العوضي',
-        email: 'mohammed@example.com',
-        role: 'member',
-        avatar: '/avatars/mohammed.jpg',
-        joinedAt: '2024-02-01'
-      },
-      {
-        id: 4,
-        name: 'نورا العوضي',
-        email: 'nora@example.com',
-        role: 'member',
-        avatar: '/avatars/nora.jpg',
-        joinedAt: '2024-03-01'
-      }
-    ]
-  };
+              {/* العنوان */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+                className="text-center mb-8"
+              >
+                <h1 className="text-3xl md:text-4xl font-bold text-emerald-800 mb-3">
+                  أنشئ عائلتك الآن
+                </h1>
+                <p className="text-lg text-emerald-600">
+                  ابدأ بإدارة مصاريف عائلتك بذكاء وسهولة
+                </p>
+              </motion.div>
+
+              {/* نموذج الإنشاء */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                className="space-y-6"
+              >
+                <div>
+                  <label className="block text-sm font-medium text-emerald-800 mb-2">
+                    اسم العائلة
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="مثال: عائلة أحمد"
+                    value={familyName}
+                    onChange={(e) => setFamilyName(e.target.value)}
+                    className="text-lg h-12"
+                  />
+                </div>
+
+                <Button
+                  onClick={handleCreateFamily}
+                  disabled={!familyName.trim() || isCreating}
+                  className="w-full bg-gradient-to-r from-emerald-600 to-amber-600 hover:from-emerald-700 hover:to-amber-700 text-white text-lg py-6"
+                >
+                  {isCreating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white ml-2" />
+                      جاري الإنشاء...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-5 h-5 ml-2" />
+                      إنشاء العائلة
+                    </>
+                  )}
+                </Button>
+              </motion.div>
+
+              {/* الميزات */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.8 }}
+                className="mt-8 pt-8 border-t border-emerald-100"
+              >
+                <p className="text-center text-sm font-medium text-emerald-700 mb-4">
+                  ماذا ستحصل عليه:
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <UserPlus className="w-6 h-6 text-emerald-600" />
+                    </div>
+                    <p className="text-sm text-emerald-600">دعوة الأفراد</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <BarChart3 className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <p className="text-sm text-emerald-600">تقارير موحدة</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <Shield className="w-6 h-6 text-amber-600" />
+                    </div>
+                    <p className="text-sm text-emerald-600">تحكم كامل</p>
+                  </div>
+                </div>
+              </motion.div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
+// مكون إدارة العائلة مع البيانات الحقيقية
+function FamilyManagement({ familyData }) {
+  const [showInviteForm, setShowInviteForm] = useState(false);
 
   const copyInviteCode = () => {
-    navigator.clipboard.writeText(mockData.family.inviteCode);
+    navigator.clipboard.writeText(familyData.family.inviteCode);
     // يمكن إضافة toast notification هنا
   };
 
@@ -161,13 +235,13 @@ export default function MyFamilyPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <label className="text-sm font-medium text-gray-600">اسم العائلة</label>
-                <p className="text-lg font-semibold text-gray-800">{mockData.family.name}</p>
+                <p className="text-lg font-semibold text-gray-800">{familyData.family.name}</p>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-600">كود الدعوة</label>
                 <div className="flex items-center gap-2">
                   <code className="bg-gray-100 px-3 py-1 rounded text-gray-800 font-mono">
-                    {mockData.family.inviteCode}
+                    {familyData.family.inviteCode}
                   </code>
                   <Button size="sm" variant="outline" onClick={copyInviteCode}>
                     <Copy className="w-4 h-4" />
@@ -177,7 +251,7 @@ export default function MyFamilyPage() {
               <div>
                 <label className="text-sm font-medium text-gray-600">تاريخ الإنشاء</label>
                 <p className="text-lg font-semibold text-gray-800">
-                  {new Date(mockData.family.createdAt).toLocaleDateString('ar-SA')}
+                  {new Date(familyData.family.createdAt).toLocaleDateString('ar-SA')}
                 </p>
               </div>
             </div>
@@ -216,7 +290,7 @@ export default function MyFamilyPage() {
                 </Button>
               </div>
               <p className="text-sm text-gray-600 mt-2">
-                أو شارك كود الدعوة: <code className="bg-gray-100 px-2 py-1 rounded">{mockData.family.inviteCode}</code>
+                أو شارك كود الدعوة: <code className="bg-gray-100 px-2 py-1 rounded">{familyData.family.inviteCode}</code>
               </p>
             </CardContent>
           </Card>
@@ -233,12 +307,12 @@ export default function MyFamilyPage() {
           <CardHeader>
             <CardTitle className="text-xl text-emerald-800 flex items-center gap-2">
               <Users className="w-6 h-6" />
-              أفراد العائلة ({mockData.members.length})
+              أفراد العائلة ({familyData.members.length})
             </CardTitle>
             <CardDescription>إدارة صلاحيات ومعلومات أفراد العائلة</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {mockData.members.map((member, index) => (
+            {familyData.members.map((member, index) => (
               <motion.div
                 key={member.id}
                 initial={{ opacity: 0, x: -20 }}
@@ -356,4 +430,44 @@ export default function MyFamilyPage() {
       </motion.div>
     </div>
   );
+}
+
+// المكون الرئيسي
+export default function MyFamilyPage() {
+  const [familyData, setFamilyData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadFamilyData();
+  }, []);
+
+  const loadFamilyData = async () => {
+    try {
+      const response = await fetch('/api/family');
+      if (response.ok) {
+        const data = await response.json();
+        setFamilyData(data);
+      }
+    } catch (error) {
+      console.error('Error loading family data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+      </div>
+    );
+  }
+
+  // إذا لم توجد بيانات عائلة، عرض شاشة إنشاء عائلة
+  if (!familyData || !familyData.family) {
+    return <CreateFamilyWelcome />;
+  }
+
+  // إذا وجدت بيانات، عرض إدارة العائلة
+  return <FamilyManagement familyData={familyData} />;
 }

@@ -428,6 +428,12 @@ export default function AddExpense() {
                 throw new Error("البند المحدد غير صحيح");
             }
 
+            // جلب category_id من subcategory
+            const categoryId = selectedSubcategory.category_id;
+            if (!categoryId) {
+                throw new Error("الفئة الفرعية غير مرتبطة بفئة");
+            }
+
             const amount = parseFloat(formData.amount);
             const currency = formData.currency;
 
@@ -445,6 +451,7 @@ export default function AddExpense() {
             const expenseData = {
                 family_id: familyId,
                 user_id: currentUser.id,
+                category_id: categoryId, // ✅ إضافة category_id
                 subcategory_id: formData.subcategory_id,
                 amount: amount,
                 currency: currency,
@@ -476,7 +483,10 @@ export default function AddExpense() {
 
             logTelemetry('createExpense', 'success', Date.now() - submitStartTime);
             toast.success(`تم إضافة المصروف بنجاح: ${conversionResult.original.formatted}`);
-            router.push("/dashboard");
+            
+            // التوجيه لقائمة المصاريف مع إعادة التحميل الفوري
+            router.push("/expenses-list");
+            router.refresh();
 
         } catch (error) {
             logTelemetry('createExpense', 'error', Date.now() - submitStartTime);

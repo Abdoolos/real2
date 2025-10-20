@@ -18,8 +18,8 @@ export const getEnvironmentInfo = () => {
   // في بيئة المتصفح
   const hostname = window.location.hostname;
   const isLocalhost = hostname.includes('localhost') || hostname.includes('127.0.0.1');
-  const isPreview = hostname.includes('preview') || hostname.includes('dev') || isLocalhost;
-  const isProduction = hostname.includes('base44.app') || (!isLocalhost && !isPreview);
+  const isProduction = !isLocalhost; // أي شيء غير localhost يُعتبر إنتاج
+  const isPreview = false; // إلغاء وضع المعاينة نهائياً
   
   return {
     isClient: true,
