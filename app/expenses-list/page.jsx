@@ -9,23 +9,50 @@ import { Calendar, Search, Edit2, Trash2, Plus, ArrowRight, Receipt } from 'luci
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { User } from '@/src/api/entities';
 
 export default function ExpensesListPage() {
   const router = useRouter();
+  const [currentUser, setCurrentUser] = useState(null);
   const [expenses, setExpenses] = useState([]);
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
 
   useEffect(() => {
-    loadData();
+    // تحميل بيانات المستخدم أولاً
+    loadUser();
   }, []);
 
-  const loadData = async () => {
+  const loadUser = async () => {
     try {
-      const response = await fetch('/api/expenses');
+      const user = await User.me();
+      setCurrentUser(user);
+      if (user?.id) {
+        loadData(user.id);
+      }
+    } catch (error) {
+      console.error('Error loading user:', error);
+      setLoading(false);
+    }
+  };
+
+  const loadData = async (userId) => {
+    if (!userId) {
+      console.error('❌ No user ID');
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      // ✅ استخدام Prisma API
+      console.log('🔄 جلب المصاريف من Prisma API...');
+      const response = await fetch(`/api/expenses?userId=${userId}`);
       console.log('📡 Response status:', response.status);
       
       if (response.ok) {
@@ -37,10 +64,11 @@ export default function ExpensesListPage() {
         console.log('📊 Is array?', Array.isArray(data));
         console.log('📊 Length:', data?.length);
         
-        // تحويل البيانات لإضافة category من subcategory
+        // تحويل البيانات لإضافة category و subcategory name
         const expensesWithCategory = Array.isArray(data) ? data.map(expense => ({
           ...expense,
-          category: expense.subcategory?.category?.name || 'غير محدد'
+          subcategoryName: expense.subcategory?.name || expense.description || 'غير محدد',
+          category: expense.subcategory?.category?.name || expense.category?.name || 'غير محدد'
         })) : [];
         
         console.log('✅ Expenses with category:', expensesWithCategory);
@@ -48,10 +76,41 @@ export default function ExpensesListPage() {
       } else {
         const errorText = await response.text();
         console.error('❌ API Error:', response.status, errorText);
+        
+        // تحليل الخطأ لمعرفة نوعه
+        let parsedError = null;
+        try {
+          parsedError = JSON.parse(errorText);
+          console.log('🔍 Parsed error:', parsedError);
+        } catch (e) {
+          console.warn('⚠️ Could not parse error JSON');
+        }
+        
+        if (parsedError?.message?.includes("Can't reach database")) {
+          console.log('🔴 Database connection error detected');
+          setError({
+            type: 'database',
+            message: 'قاعدة البيانات غير متصلة حالياً'
+          });
+        } else if (parsedError?.message) {
+          setError({
+            type: 'api',
+            message: parsedError.message
+          });
+        } else {
+          setError({
+            type: 'unknown',
+            message: 'حدث خطأ غير متوقع'
+          });
+        }
         setExpenses([]);
       }
     } catch (error) {
       console.error('💥 Error loading expenses:', error);
+      setError({
+        type: 'network',
+        message: 'فشل الاتصال بالخادم'
+      });
       setExpenses([]);
     } finally {
       setLoading(false);
@@ -78,7 +137,9 @@ export default function ExpensesListPage() {
   
   const filteredExpenses = safeExpenses.filter(expense => {
     const matchesSearch = expense.description?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         expense.category?.toLowerCase().includes(searchTerm.toLowerCase());
+                         expense.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         expense.subcategoryName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         expense.note?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = filterCategory === 'all' || expense.category === filterCategory;
     return matchesSearch && matchesCategory;
   });
@@ -89,6 +150,62 @@ export default function ExpensesListPage() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-emerald-600 mx-auto"></div>
           <p className="mt-4 text-emerald-700 font-medium">جاري تحميل المصاريف...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // عرض رسالة الخطأ إذا كان هناك خطأ في الاتصال بقاعدة البيانات
+  if (error && error.type === 'database') {
+    console.log('🖥️ Showing database error page');
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-amber-50 to-emerald-100" dir="rtl">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <Card className="bg-white shadow-2xl border-2 border-amber-200">
+            <CardContent className="p-8 text-center">
+              <div className="mb-6">
+                <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-10 h-10 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">قاعدة البيانات غير متصلة</h2>
+                <p className="text-gray-600 mb-6">
+                  عذراً، لا يمكن الوصول إلى قاعدة البيانات في الوقت الحالي.
+                </p>
+              </div>
+              
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-right">
+                <h3 className="font-semibold text-blue-800 mb-2">💡 نصيحة:</h3>
+                <p className="text-blue-700 text-sm">
+                  المصروف الذي أضفته تم حفظه مؤقتاً. عند إصلاح الاتصال بقاعدة البيانات، ستظهر جميع المصاريف.
+                </p>
+              </div>
+
+              <div className="flex gap-4 justify-center">
+                <Button
+                  onClick={() => {
+                    setError(null);
+                    loadUser();
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
+                  <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  إعادة المحاولة
+                </Button>
+                <Button
+                  onClick={() => router.push('/dashboard')}
+                  variant="outline"
+                  className="border-emerald-600 text-emerald-600 hover:bg-emerald-50"
+                >
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                  العودة للرئيسية
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -234,14 +351,24 @@ export default function ExpensesListPage() {
                   <CardContent className="p-6">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-3">
-                          <h3 className="text-xl font-bold text-gray-800">
-                            {expense.description || 'مصروف'}
-                          </h3>
-                          <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 px-3 py-1">
-                            {expense.category || 'غير محدد'}
-                          </Badge>
+                        {/* عرض الفئة والبند بشكل واضح */}
+                        <div className="mb-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-sm font-medium text-emerald-600">الفئة:</span>
+                            <Badge className="bg-emerald-500 text-white px-4 py-1 text-base font-bold">
+                              {expense.category || 'غير محدد'}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-amber-600">البند:</span>
+                            <h3 className="text-xl font-bold text-gray-800">
+                              {expense.subcategoryName || expense.description || 'غير محدد'}
+                            </h3>
+                          </div>
                         </div>
+                        {expense.note && (
+                          <p className="text-sm text-gray-600 mb-2">📝 {expense.note}</p>
+                        )}
                         <div className="flex flex-wrap items-center gap-4 text-gray-600">
                           <span className="flex items-center gap-2 bg-emerald-50 px-3 py-1 rounded-full">
                             <Calendar className="w-4 h-4 text-emerald-600" />

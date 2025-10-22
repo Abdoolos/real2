@@ -49,9 +49,12 @@ function successResponse(data: any, status: number = 200) {
 
 // GET /api/expenses - Get expenses with filters and pagination
 export async function GET(request: NextRequest) {
+  let queryParams: any = {};
+  let filters: any = {};
+  
   try {
     const { searchParams } = new URL(request.url);
-    const queryParams = Object.fromEntries(searchParams.entries());
+    queryParams = Object.fromEntries(searchParams.entries());
 
     // Validate query parameters
     const validationResult = GetExpensesSchema.safeParse(queryParams);
@@ -77,7 +80,7 @@ export async function GET(request: NextRequest) {
     } = validationResult.data;
 
     // Build filters
-    const filters = {
+    filters = {
       userId,
       familyId,
       categoryId,
@@ -99,15 +102,28 @@ export async function GET(request: NextRequest) {
     return successResponse(result);
 
   } catch (error) {
-    console.error('Error fetching expenses:', error);
-    return errorResponse('خطأ في جلب المصاريف', 'FETCH_ERROR', 500);
+    console.error('❌ Error fetching expenses:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined,
+      filters,
+      queryParams
+    });
+    return errorResponse(
+      `خطأ في جلب المصاريف: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`,
+      'FETCH_ERROR',
+      500
+    );
   }
 }
 
 // POST /api/expenses - Create new expense
 export async function POST(request: NextRequest) {
+  let body: any = {};
+  
   try {
-    const body = await request.json();
+    body = await request.json();
 
     // Validate request body
     const validationResult = CreateExpenseSchema.safeParse(body);
@@ -163,7 +179,17 @@ export async function POST(request: NextRequest) {
     return successResponse(responseData, 201);
 
   } catch (error) {
-    console.error('Error creating expense:', error);
-    return errorResponse('خطأ في إنشاء المصروف', 'CREATE_ERROR', 500);
+    console.error('❌ Error creating expense:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined,
+      body: body
+    });
+    return errorResponse(
+      `خطأ في إنشاء المصروف: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`,
+      'CREATE_ERROR',
+      500
+    );
   }
 }

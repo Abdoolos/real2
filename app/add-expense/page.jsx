@@ -255,7 +255,7 @@ export default function AddExpense() {
                 }
             }
 
-            // 2. فحص الحاجة للتنظيف
+            // 2. تم تعطيل التنظيف التلقائي - البنود موجودة بالفعل في قاعدة البيانات
             // We ensure default categories exist first before fixing subcategories,
             // as subcategories depend on category IDs.
             const defaultCategoriesToEnsure = [
@@ -297,22 +297,43 @@ export default function AddExpense() {
                 console.log('✅ New default categories created.');
             }
 
-            const needsCleanup = !localStorage.getItem('rialmind_subcategories_fixed_v3');
+            // تم تعطيل التنظيف التلقائي - البنود موجودة في قاعدة البيانات
+            console.log('ℹ️ تخطي التنظيف التلقائي - البنود موجودة في قاعدة البيانات');
 
-            if (needsCleanup) {
-                console.log('🔧 يحتاج تنظيف شامل للفئات الفرعية...');
-                const cleanupSuccess = await fixSubcategoriesCompletely();
-                if (cleanupSuccess) {
-                    localStorage.setItem('rialmind_subcategories_fixed_v3', 'true');
-                    console.log('✅ تم وضع علامة على الفئات الفرعية على أنها ثابتة.');
-                }
-            }
-
-            // 3. تحميل البيانات المحدثة (سواء بعد التنظيف أو مباشرة إذا لم يكن هناك حاجة للتنظيف)
-            const [categoriesData, subcategoriesData] = await Promise.all([
+            // 3. تحميل البيانات من API الجديد
+            console.log('📡 جلب البيانات من API...');
+            const [categoriesData, subcategoriesResponse] = await Promise.all([
                 Category.list(),
-                Subcategory.list()
+                fetch('/api/subcategories', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    cache: 'no-store' // منع الـ cache
+                }).then(async res => {
+                    if (!res.ok) {
+                        const errorText = await res.text();
+                        console.error('❌ خطأ في API:', res.status, errorText);
+                        throw new Error(`API Error: ${res.status}`);
+                    }
+                    return res.json();
+                })
             ]);
+
+            console.log('📡 استجابة API:', {
+                success: subcategoriesResponse.success,
+                count: subcategoriesResponse.count,
+                dataLength: subcategoriesResponse.data?.length,
+                source: subcategoriesResponse.source
+            });
+
+            const subcategoriesData = subcategoriesResponse.success ? subcategoriesResponse.data : [];
+            console.log(`📝 البنود المستلمة من API: ${subcategoriesData.length}`);
+            
+            // إذا كانت البيانات احتياطية، نحتاج إلى مطابقتها مع الفئات
+            if (subcategoriesResponse.source === 'fallback' && subcategoriesData.length > 0) {
+                console.log('🔄 معالجة البيانات الاحتياطية...');
+            }
 
             // 4. تنظيف وترتيب البيانات
             const cleanCategories = (categoriesData || [])
@@ -327,15 +348,46 @@ export default function AddExpense() {
                     return a.name.localeCompare(b.name, 'ar');
                 });
 
+            // إذا كانت البيانات احتياطية، نطابق category_id مع الفئات الموجودة
+            let finalSubcategories = subcategoriesData;
+            
+            if (subcategoriesResponse.source === 'fallback' && cleanCategories.length > 0) {
+                // إنشاء خريطة للفئات حسب الاسم
+                const categoryMap = new Map();
+                cleanCategories.forEach(cat => {
+                    categoryMap.set(normalizeArabic(cat.name), cat.id);
+                });
+                
+                // تحديث category_id في البيانات الاحتياطية
+                finalSubcategories = subcategoriesData.map(sub => {
+                    const categoryName = sub.category?.name;
+                    if (categoryName) {
+                        const categoryId = categoryMap.get(normalizeArabic(categoryName));
+                        if (categoryId) {
+                            return {
+                                ...sub,
+                                category_id: categoryId,
+                                categoryId: categoryId
+                            };
+                        }
+                    }
+                    return sub;
+                });
+                
+                console.log('✅ تم تحديث category_id للبيانات الاحتياطية');
+            }
+
             const validCategoryIds = new Set(cleanCategories.map(cat => cat.id));
-            const validSubcategories = (subcategoriesData || []).filter(sub =>
-                validCategoryIds.has(sub.category_id) && sub.is_active !== false
+            const validSubcategories = (finalSubcategories || []).filter(sub =>
+                sub.category_id && validCategoryIds.has(sub.category_id) && sub.is_active !== false
             );
 
             setCategories(cleanCategories);
             setSubcategories(validSubcategories);
 
             console.log(`✅ النتيجة النهائية: ${cleanCategories.length} فئة، ${validSubcategories.length} فئة فرعية`);
+            console.log('📋 الفئات:', cleanCategories.map(c => c.name));
+            console.log('📝 الفئات الفرعية:', validSubcategories.map(s => `${s.name} (category_id: ${s.category_id})`));
 
         } catch (err) {
             console.error("خطأ في تحميل البيانات:", err);
@@ -512,6 +564,13 @@ export default function AddExpense() {
     const getGroupedSubcategories = () => {
         const grouped = {};
 
+        console.log('🔍 تجميع الفئات الفرعية:', {
+            categoriesCount: categories.length,
+            subcategoriesCount: subcategories.length,
+            categories: categories.map(c => ({ id: c.id, name: c.name })),
+            subcategories: subcategories.map(s => ({ id: s.id, name: s.name, category_id: s.category_id }))
+        });
+
         // Categories are already sorted in loadInitialData, iterate through them directly
         categories.forEach(category => {
             const categorySubcategories = subcategories
@@ -531,8 +590,11 @@ export default function AddExpense() {
 
             if (categorySubcategories.length > 0) {
                 grouped[category.name] = categorySubcategories;
+                console.log(`✅ ${category.name}: ${categorySubcategories.length} بند`);
             }
         });
+
+        console.log('📊 نتيجة التجميع:', Object.keys(grouped).length, 'فئة تحتوي على بنود');
 
         // The categories array is already sorted, so iterating through it will maintain order.
         // No need for a separate `orderedGrouped` object.
@@ -711,7 +773,28 @@ export default function AddExpense() {
                                                     إعادة المحاولة
                                                 </Button>
                                             </div>
-                                        ) : subcategories.length > 0 ? (
+                                        ) : subcategories.length === 0 ? (
+                                            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                                                <div className="text-center mb-3">
+                                                    <p className="text-amber-800 font-semibold">⚠️ لا توجد بنود في قاعدة البيانات</p>
+                                                    <p className="text-sm text-amber-700 mt-1">
+                                                        الفئات: {categories.length} | البنود: {subcategories.length}
+                                                    </p>
+                                                </div>
+                                                <Button 
+                                                    onClick={async () => {
+                                                        console.log('🔄 بدء إعادة إنشاء البنود...');
+                                                        await fixSubcategoriesCompletely();
+                                                        await loadInitialData();
+                                                    }}
+                                                    className="w-full bg-emerald-600 hover:bg-emerald-700"
+                                                    size="sm"
+                                                >
+                                                    <RefreshCw className="w-4 h-4 ml-2" />
+                                                    إعادة إنشاء البنود
+                                                </Button>
+                                            </div>
+                                        ) : (
                                             <Select
                                                 onValueChange={(value) => handleChange('subcategory_id', value)}
                                                 value={formData.subcategory_id}
@@ -721,46 +804,48 @@ export default function AddExpense() {
                                                     <SelectValue placeholder="اختر البند" />
                                                 </SelectTrigger>
                                                 <SelectContent position="popper" sideOffset={5} align="end">
-                                                    {Object.entries(groupedSubcategories).map(([categoryName, subs]) => (
-                                                        <SelectGroup key={categoryName}>
-                                                            <SelectLabel className="text-emerald-700 bg-emerald-50 sticky top-0">{categoryName}</SelectLabel>
-                                                            {subs.map((subcategory) => (
-                                                                <SelectItem key={`${subcategory.id}-${subcategory.name}`} value={subcategory.id}>
-                                                                    <div className="flex items-center gap-2" dir="rtl">
-                                                                        <span>{subcategory.name}</span>
-                                                                        {subcategory.usage_count > 0 && (
-                                                                            <span className="text-xs text-emerald-500">({subcategory.usage_count})</span>
-                                                                        )}
-                                                                    </div>
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectGroup>
-                                                    ))}
+                                                    {Object.entries(groupedSubcategories).length > 0 ? (
+                                                        Object.entries(groupedSubcategories).map(([categoryName, subs]) => (
+                                                            <SelectGroup key={categoryName}>
+                                                                <SelectLabel className="text-emerald-700 bg-emerald-50 sticky top-0">{categoryName}</SelectLabel>
+                                                                {subs.map((subcategory) => (
+                                                                    <SelectItem key={`${subcategory.id}-${subcategory.name}`} value={String(subcategory.id)}>
+                                                                        <div className="flex items-center gap-2" dir="rtl">
+                                                                            <span>{subcategory.name}</span>
+                                                                            {subcategory.usage_count > 0 && (
+                                                                                <span className="text-xs text-emerald-500">({subcategory.usage_count})</span>
+                                                                            )}
+                                                                        </div>
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectGroup>
+                                                        ))
+                                                    ) : (
+                                                        <div className="p-4 text-center">
+                                                            <p className="text-amber-600 text-sm font-bold">لا توجد بنود متاحة</p>
+                                                            <p className="text-xs text-gray-500 mt-2">
+                                                                الفئات: {categories.length} | البنود: {subcategories.length}
+                                                            </p>
+                                                            <Button 
+                                                                onClick={async () => {
+                                                                    await fixSubcategoriesCompletely();
+                                                                    await loadInitialData();
+                                                                }}
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="mt-3"
+                                                            >
+                                                                <RefreshCw className="w-4 h-4 ml-2" />
+                                                                إعادة إنشاء البنود
+                                                            </Button>
+                                                        </div>
+                                                    )}
                                                 </SelectContent>
                                             </Select>
-                                        ) : (
-                                            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-center">
-                                                <p className="text-amber-800 font-semibold">لا توجد بنود</p>
-                                                <p className="text-sm text-amber-700">اذهب إلى صفحة الفئات لإضافة بنود جديدة.</p>
-                                            </div>
                                         )}
                                         {errors.subcategory_id && (
                                             <p className="text-sm text-red-600">{errors.subcategory_id}</p>
                                         )}
-                                        <div className="text-xs text-emerald-600 flex items-center gap-2 mt-2">
-                                            <Lightbulb className="w-4 h-4 text-amber-500" />
-                                            <span>
-                                                لا تجد البند المطلوب؟ استخدم{' '}
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => router.push('/financial-chatbot')} 
-                                                    className="font-bold underline text-emerald-700 hover:text-emerald-900"
-                                                >
-                                                    المساعد الذكي
-                                                </button>{' '}
-                                                لإضافة بنود جديدة تلقائياً.
-                                            </span>
-                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>
