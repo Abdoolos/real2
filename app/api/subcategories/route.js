@@ -124,20 +124,23 @@ export async function GET() {
     console.log('🔄 [API] استخدام البيانات الاحتياطية...');
     
     // استخدام البيانات الاحتياطية عند فشل الاتصال
+    // ⚠️ المشكلة: البيانات الاحتياطية لا تحتوي على category_id صحيح
+    // الحل: إرجاع البيانات الاحتياطية مع علامة للواجهة الأمامية لمطابقة الفئات
     const formattedFallback = fallbackSubcategories.map(sub => ({
       id: sub.id,
       name: sub.name,
-      category_id: sub.id, // استخدام نفس الـ ID مؤقتاً
-      categoryId: sub.id,
+      category_id: null, // ✅ null بدلاً من ID خاطئ
+      categoryId: null,
       is_active: true,
       usage_count: 0,
       category: {
-        id: sub.id,
-        name: sub.category_name
+        id: null,
+        name: sub.category_name // الواجهة ستطابق هذا الاسم مع الفئات
       }
     }));
 
     console.log(`✅ [API] تم تحميل ${formattedFallback.length} بند من البيانات الاحتياطية`);
+    console.log('⚠️ [API] تحذير: category_id = null - الواجهة ستطابق حسب category.name');
     console.log('📝 [API] عينة من البنود الاحتياطية:', formattedFallback.slice(0, 3).map(s => `${s.name} (${s.category.name})`));
     
     return NextResponse.json({
@@ -145,7 +148,7 @@ export async function GET() {
       data: formattedFallback,
       count: formattedFallback.length,
       source: 'fallback',
-      warning: 'Using fallback data due to database connection issue'
+      warning: 'Using fallback data - categories will be matched by name on frontend'
     });
   }
 }

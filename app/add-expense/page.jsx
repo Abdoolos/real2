@@ -352,29 +352,44 @@ export default function AddExpense() {
             let finalSubcategories = subcategoriesData;
             
             if (subcategoriesResponse.source === 'fallback' && cleanCategories.length > 0) {
-                // إنشاء خريطة للفئات حسب الاسم
+                console.log('🔄 معالجة البيانات الاحتياطية...');
+                
+                // إنشاء خريطة للفئات حسب الاسم (مع normalization)
                 const categoryMap = new Map();
                 cleanCategories.forEach(cat => {
-                    categoryMap.set(normalizeArabic(cat.name), cat.id);
+                    const normalizedName = normalizeArabic(cat.name);
+                    categoryMap.set(normalizedName, cat.id);
+                    console.log(`📋 فئة متاحة: "${cat.name}" -> normalized: "${normalizedName}" -> ID: ${cat.id}`);
                 });
                 
                 // تحديث category_id في البيانات الاحتياطية
-                finalSubcategories = subcategoriesData.map(sub => {
-                    const categoryName = sub.category?.name;
-                    if (categoryName) {
-                        const categoryId = categoryMap.get(normalizeArabic(categoryName));
-                        if (categoryId) {
-                            return {
-                                ...sub,
-                                category_id: categoryId,
-                                categoryId: categoryId
-                            };
+                finalSubcategories = subcategoriesData
+                    .map(sub => {
+                        const categoryName = sub.category?.name;
+                        if (!categoryName) {
+                            console.warn(`⚠️ بند بدون اسم فئة: ${sub.name}`);
+                            return null;
                         }
-                    }
-                    return sub;
-                });
+                        
+                        const normalizedCategoryName = normalizeArabic(categoryName);
+                        const categoryId = categoryMap.get(normalizedCategoryName);
+                        
+                        if (!categoryId) {
+                            console.warn(`⚠️ لم يتم العثور على فئة "${categoryName}" (normalized: "${normalizedCategoryName}") للبند: ${sub.name}`);
+                            console.log(`   الفئات المتاحة:`, Array.from(categoryMap.keys()));
+                            return null;
+                        }
+                        
+                        console.log(`✅ ${sub.name} -> ${categoryName} (ID: ${categoryId})`);
+                        return {
+                            ...sub,
+                            category_id: categoryId,
+                            categoryId: categoryId
+                        };
+                    })
+                    .filter(sub => sub !== null); // إزالة البنود التي لم تجد فئة
                 
-                console.log('✅ تم تحديث category_id للبيانات الاحتياطية');
+                console.log(`✅ تم مطابقة ${finalSubcategories.length} بند من ${subcategoriesData.length} بند احتياطي`);
             }
 
             const validCategoryIds = new Set(cleanCategories.map(cat => cat.id));
