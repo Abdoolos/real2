@@ -23,19 +23,39 @@ async function fetchSubcategoriesFromSupabase() {
   const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/subcategories?select=*,category:categories(*)`, {
-    headers: {
-      'apikey': SUPABASE_KEY,
-      'Authorization': `Bearer ${SUPABASE_KEY}`,
-      'Content-Type': 'application/json'
-    }
-  });
+  console.log('🔗 [Supabase] URL:', SUPABASE_URL);
+  console.log('🔑 [Supabase] Key exists:', !!SUPABASE_KEY);
   
-  if (!response.ok) {
-    throw new Error(`Supabase REST API failed: ${response.status}`);
+  // جرب أسماء الجداول المختلفة (case-sensitive في PostgreSQL)
+  const tableNames = ['Subcategory', 'subcategories', 'subcategory'];
+  
+  for (const tableName of tableNames) {
+    try {
+      console.log(`📡 [Supabase] محاولة جلب من جدول: ${tableName}`);
+      
+      const url = `${SUPABASE_URL}/rest/v1/${tableName}?select=*,category:Category(*)`;
+      const response = await fetch(url, {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`✅ [Supabase] نجح من ${tableName}: ${data.length} بند`);
+        return data;
+      } else {
+        console.warn(`⚠️ [Supabase] ${tableName} فشل: ${response.status}`);
+      }
+    } catch (err) {
+      console.warn(`⚠️ [Supabase] ${tableName} خطأ:`, err.message);
+    }
   }
   
-  return response.json();
+  throw new Error('All Supabase table names failed');
 }
 
 // Helper function for retry logic
