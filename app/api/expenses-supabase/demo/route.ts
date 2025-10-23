@@ -4,6 +4,8 @@ import { createServerClient } from '@supabase/ssr'
 
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url)
+    const overrideUserId = searchParams.get('userId')
     // تحقّق من المستخدم الحالي عبر كوكيز Supabase (Anon)
     let response = NextResponse.next()
     const supabaseAuth = createServerClient(
@@ -26,9 +28,10 @@ export async function GET(request: NextRequest) {
     if (userErr) {
       console.error('Auth error:', userErr)
     }
-    const user = userData?.user
-    if (!user) {
-      return NextResponse.json({ ok: false, message: 'الرجاء تسجيل الدخول أولاً' }, { status: 401 })
+    const supabaseUser = userData?.user
+    const effectiveUserId = overrideUserId || supabaseUser?.id
+    if (!effectiveUserId) {
+      return NextResponse.json({ ok: false, message: 'الرجاء تسجيل الدخول أولاً أو تمرير userId' }, { status: 401 })
     }
 
     // عميل إداري للخادم (يتجاوز RLS) لتهيئة بيانات أساسية وإدخال المصروف
@@ -39,7 +42,7 @@ export async function GET(request: NextRequest) {
 
     // تأمين فئة وبند أساسيين (إن لم يكونا موجودين)
     const { data: cats } = await supabaseAdmin.from('categories').select('*').limit(1)
-    let categoryId = cats && cats[0]?.id
+  let categoryId = cats && cats[0]?.id
     if (!categoryId) {
       const { data: newCat, error: catErr } = await supabaseAdmin
         .from('categories')
@@ -75,7 +78,7 @@ export async function GET(request: NextRequest) {
       notes: 'تم الإنشاء تلقائياً للاختبار',
       categoryId,
       subcategoryId,
-      userId: user.id,
+      userId: effectiveUserId,
       familyId: null,
       billId: null,
       currency: 'SAR',

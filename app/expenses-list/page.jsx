@@ -272,7 +272,8 @@ export default function ExpensesListPage() {
               variant="outline"
               onClick={async () => {
                 try {
-                  const res = await fetch('/api/expenses-supabase/demo', { cache: 'no-store' })
+                  const uid = currentUser?.id ? `?userId=${encodeURIComponent(currentUser.id)}` : ''
+                  const res = await fetch(`/api/expenses-supabase/demo${uid}`, { cache: 'no-store' })
                   if (!res.ok) {
                     const t = await res.text()
                     console.error('Demo insert failed:', res.status, t)

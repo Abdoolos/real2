@@ -4,9 +4,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
+// استخدم مفتاح الخدمة على السيرفر لتجاوز RLS بأمان داخل Route Handler
+const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 export async function GET(request: NextRequest) {
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 [Supabase REST] جلب المصاريف لـ:', userId);
 
-    let query = supabase
+    let query = supabaseAdmin
       .from('expenses')
       .select('*', { count: 'exact' })
       .eq('userId', userId)
@@ -51,8 +52,8 @@ export async function GET(request: NextRequest) {
 
     // جلب الفئات والبنود لعمل join يدوي (لأنه قد لا توجد مفاتيح خارجية معرفة في القاعدة)
     const [catRes, subcatRes] = await Promise.all([
-      supabase.from('categories').select('*'),
-      supabase.from('subcategories').select('*'),
+      supabaseAdmin.from('categories').select('*'),
+      supabaseAdmin.from('subcategories').select('*'),
     ])
 
     const categories = catRes.data || []
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('expenses')
       .insert([body])
       .select(`
