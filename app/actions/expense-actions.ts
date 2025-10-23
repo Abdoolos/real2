@@ -32,19 +32,19 @@ export async function createExpenseAction(expenseData: CreateExpenseData) {
     const { data, error } = await supabaseAdmin
       .from('expenses')
       .insert([{
-        familyId: expenseData.family_id,
-        userId: expenseData.user_id,
-        categoryId: expenseData.category_id,
-        subcategoryId: expenseData.subcategory_id,
+        family_id: expenseData.family_id,
+        user_id: expenseData.user_id,
+        category_id: expenseData.category_id,
+        subcategory_id: expenseData.subcategory_id,
         amount: expenseData.amount,
         currency: expenseData.currency,
-        amountInSar: expenseData.amount_in_sar,
-        exchangeRate: expenseData.exchange_rate,
+        amount_in_sar: expenseData.amount_in_sar,
+        exchange_rate: expenseData.exchange_rate,
         date: expenseData.date,
         note: expenseData.note,
-        receiptUrl: expenseData.receipt_url,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        receipt_url: expenseData.receipt_url,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }])
       .select('*')
       .single();
@@ -109,7 +109,7 @@ export async function updateSubcategoryUsage(subcategoryId: string) {
       .from('subcategories')
       .update({ 
         usage_count: (current?.usage_count || 0) + 1,
-        updatedAt: new Date().toISOString()
+        updated_at: new Date().toISOString()
       })
       .eq('id', subcategoryId);
 
