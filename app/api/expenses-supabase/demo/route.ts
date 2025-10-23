@@ -29,9 +29,10 @@ export async function GET(request: NextRequest) {
       console.error('Auth error:', userErr)
     }
     const supabaseUser = userData?.user
-    const effectiveUserId = overrideUserId || supabaseUser?.id
+    let effectiveUserId = overrideUserId || supabaseUser?.id
     if (!effectiveUserId) {
-      return NextResponse.json({ ok: false, message: 'الرجاء تسجيل الدخول أولاً أو تمرير userId' }, { status: 401 })
+      // وضع تجريبي: في حال عدم وجود مستخدم، استخدم معرفًا افتراضيًا للاختبار
+      effectiveUserId = 'local_user_1'
     }
 
     // عميل إداري للخادم (يتجاوز RLS) لتهيئة بيانات أساسية وإدخال المصروف
@@ -69,6 +70,11 @@ export async function GET(request: NextRequest) {
       if (subErr) throw subErr
       subcategoryId = newSub.id
     }
+
+    // تأكد من وجود سجل مستخدم أساسي (اختياري)
+    await supabaseAdmin
+      .from('users')
+      .upsert([{ id: effectiveUserId, name: 'Demo User' }], { onConflict: 'id' })
 
     // إدراج مصروف تجريبي للمستخدم الحالي
     const demoExpense = {
