@@ -7,6 +7,7 @@ import { Subcategory } from '../../src/api/entities';
 import { User } from '../../src/api/entities';
 import { CategoryBudget } from '../../src/api/entities';
 import { UploadFile } from "../../src/api/integrations";
+import { createExpenseAction, updateSubcategoryUsage } from '../actions/expense-actions';
 import { Button } from "../../src/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../src/components/ui/card";
 import { Input } from "../../src/components/ui/input";
@@ -536,23 +537,44 @@ export default function AddExpense() {
                 willBeFamilyExpense: expenseType === 'family' && currentUser.family_id
             });
 
-            await Expense.create(expenseData);
+            // ✅ استخدام Server Action بدلاً من Expense.create()
+            const result = await createExpenseAction(expenseData);
 
-            try {
-                await Subcategory.update(selectedSubcategory.id, {
-                    usage_count: (selectedSubcategory.usage_count || 0) + 1
-                });
-            } catch (updateError) {
-                console.warn("Failed to update usage count:", updateError);
+            if (!result.success) {
+                throw new Error(result.error || 'فشل في حفظ المصروف');
             }
+
+            // ✅ تحديث عداد الاستخدام باستخدام Server Action
+            await updateSubcategoryUsage(formData.subcategory_id);
 
             localStorage.setItem('rialmind_last_subcategory_id', formData.subcategory_id);
 
             logTelemetry('createExpense', 'success', Date.now() - submitStartTime);
-            toast.success(`تم إضافة المصروف بنجاح: ${conversionResult.original.formatted}`);
             
-            // التوجيه لقائمة المصاريف مع معامل refresh لإعادة التحميل
-            router.push("/expenses-list?refresh=true");
+            // ✅ رسالة تأكيد محسنة مع تفاصيل المصروف
+            const successMessage = `تم حفظ المصروف بنجاح! 💰\n${selectedSubcategory.name}: ${conversionResult.original.formatted}`;
+            toast.success(successMessage, {
+                duration: 4000,
+                action: {
+                    label: 'عرض القائمة',
+                    onClick: () => router.push("/expenses-list")
+                }
+            });
+            
+            // إعادة تعيين النموذج للسماح بإضافة مصروف آخر
+            setFormData({
+                amount: "",
+                subcategory_id: formData.subcategory_id, // الاحتفاظ بالبند المحدد
+                currency: formData.currency, // الاحتفاظ بالعملة
+                date: new Date().toISOString().split('T')[0], // تاريخ اليوم
+                note: "",
+                receipt_url: ""
+            });
+            
+            // تأخير قصير ثم التوجيه لقائمة المصاريف مع إبطال Cache
+            setTimeout(() => {
+                router.push("/expenses-list");
+            }, 1500);
 
         } catch (error) {
             logTelemetry('createExpense', 'error', Date.now() - submitStartTime);

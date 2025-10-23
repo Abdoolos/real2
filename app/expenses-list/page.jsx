@@ -79,7 +79,8 @@ export default function ExpensesListPage() {
       const response = await fetch(`/api/expenses-supabase?userId=${userId}&_=${Date.now()}`, {
         cache: 'no-store',
         headers: {
-          'Cache-Control': 'no-cache'
+          'Cache-Control': 'no-cache',
+          'X-Cache-Tags': `expenses,expenses-user-${userId}`
         }
       });
       console.log('📡 Response status:', response.status);
