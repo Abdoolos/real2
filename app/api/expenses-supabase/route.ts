@@ -31,12 +31,12 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('expenses')
       .select('*', { count: 'exact' })
-      .eq('user_id', userId)
+      .eq('userId', userId)
       .order('date', { ascending: false });
 
-    if (familyId) query = query.eq('family_id', familyId);
-    if (categoryId) query = query.eq('category_id', categoryId);
-    if (subcategoryId) query = query.eq('subcategory_id', subcategoryId);
+    if (familyId) query = query.eq('familyId', familyId);
+    if (categoryId) query = query.eq('categoryId', categoryId);
+    if (subcategoryId) query = query.eq('subcategoryId', subcategoryId);
 
     query = query.range((page - 1) * limit, page * limit - 1);
 
