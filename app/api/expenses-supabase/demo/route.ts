@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     // جلب أول فئة فرعية متاحة
     const { data: subcategories, error: subError } = await supabaseAdmin
       .from('subcategories')
-      .select('id, category_id')
+      .select('id, categoryId')
       .limit(1);
 
     if (subError || !subcategories || subcategories.length === 0) {
@@ -39,19 +39,15 @@ export async function GET(request: NextRequest) {
 
     const subcategory = subcategories[0];
 
-    // إنشاء مصروف تجريبي
+    // إنشاء مصروف تجريبي بالبنية الصحيحة
     const demoExpense = {
-      user_id: userId,
-      category_id: subcategory.category_id,
-      subcategory_id: subcategory.id,
+      id: `expense-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      userId: userId,
+      categoryId: subcategory.categoryId,
+      subcategoryId: subcategory.id,
       amount: 50,
-      currency: 'SAR',
-      amount_in_sar: 50,
-      exchange_rate: 1,
       date: new Date().toISOString().split('T')[0],
-      note: 'مصروف تجريبي لاختبار النظام',
-      receipt_url: null,
-      family_id: null
+      description: 'مصروف تجريبي لاختبار النظام 🧪'
     };
 
     console.log('📝 بيانات المصروف التجريبي:', demoExpense);
