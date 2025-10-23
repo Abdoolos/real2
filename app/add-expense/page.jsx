@@ -537,15 +537,37 @@ export default function AddExpense() {
                 willBeFamilyExpense: expenseType === 'family' && currentUser.family_id
             });
 
-            // ✅ استخدام Server Action بدلاً من Expense.create()
-            const result = await createExpenseAction(expenseData);
+            // ✅ محاولة استخدام Server Action أولاً مع fallback للطريقة القديمة
+            let serverActionSuccess = false;
+            try {
+                console.log('🔄 محاولة استخدام Server Actions...');
+                const result = await createExpenseAction(expenseData);
+                
+                if (result.success) {
+                    console.log('✅ Server Action نجح');
+                    serverActionSuccess = true;
+                    
+                    // تحديث عداد الاستخدام
+                    await updateSubcategoryUsage(formData.subcategory_id);
+                } else {
+                    console.warn('⚠️ Server Action فشل:', result.error);
+                    throw new Error(result.error || 'فشل Server Action');
+                }
+            } catch (serverActionError) {
+                console.warn('⚠️ Server Action غير متاح، استخدام الطريقة القديمة...', serverActionError);
+                
+                // ✅ Fallback للطريقة القديمة
+                await Expense.create(expenseData);
+                serverActionSuccess = false;
 
-            if (!result.success) {
-                throw new Error(result.error || 'فشل في حفظ المصروف');
+                try {
+                    await Subcategory.update(selectedSubcategory.id, {
+                        usage_count: (selectedSubcategory.usage_count || 0) + 1
+                    });
+                } catch (updateError) {
+                    console.warn("Failed to update usage count:", updateError);
+                }
             }
-
-            // ✅ تحديث عداد الاستخدام باستخدام Server Action
-            await updateSubcategoryUsage(formData.subcategory_id);
 
             localStorage.setItem('rialmind_last_subcategory_id', formData.subcategory_id);
 
