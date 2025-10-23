@@ -65,14 +65,17 @@ CREATE TABLE IF NOT EXISTS public.expenses (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- توحيد المخطط إذا كان الجدول موجوداً مسبقاً بدون عمود user_id
+-- لا تضف أعمدة جديدة إن كانت البنية مختلفة (camelCase موجودة)
+
 -- ============================================
 -- 5. إضافة Indexes للأداء
 -- ============================================
-CREATE INDEX IF NOT EXISTS idx_expenses_user_id ON public.expenses(user_id);
-CREATE INDEX IF NOT EXISTS idx_expenses_category_id ON public.expenses(category_id);
+CREATE INDEX IF NOT EXISTS idx_expenses_userId ON public.expenses("userId");
+CREATE INDEX IF NOT EXISTS idx_expenses_categoryId ON public.expenses("categoryId");
 CREATE INDEX IF NOT EXISTS idx_expenses_date ON public.expenses(date DESC);
-CREATE INDEX IF NOT EXISTS idx_subcategories_category_id ON public.subcategories(category_id);
-CREATE INDEX IF NOT EXISTS idx_categories_sort_order ON public.categories(sort_order);
+CREATE INDEX IF NOT EXISTS idx_subcategories_categoryId ON public.subcategories("categoryId");
+-- (تم تجاهل فهرس sortOrder لأن العمود غير موجود في المخطط الحالي)
 
 -- ============================================
 -- 6. تفعيل Row Level Security
@@ -108,41 +111,41 @@ CREATE POLICY "Anyone can read subcategories" ON public.subcategories
 -- Expenses policies (خاصة لكل مستخدم)
 DROP POLICY IF EXISTS "Users can read their own expenses" ON public.expenses;
 CREATE POLICY "Users can read their own expenses" ON public.expenses
-  FOR SELECT USING (auth.uid()::text = user_id);
+  FOR SELECT USING (auth.uid()::text = "userId");
 
 DROP POLICY IF EXISTS "Users can insert their own expenses" ON public.expenses;
 CREATE POLICY "Users can insert their own expenses" ON public.expenses
-  FOR INSERT WITH CHECK (auth.uid()::text = user_id);
+  FOR INSERT WITH CHECK (auth.uid()::text = "userId");
 
 DROP POLICY IF EXISTS "Users can update their own expenses" ON public.expenses;
 CREATE POLICY "Users can update their own expenses" ON public.expenses
-  FOR UPDATE USING (auth.uid()::text = user_id);
+  FOR UPDATE USING (auth.uid()::text = "userId");
 
 DROP POLICY IF EXISTS "Users can delete their own expenses" ON public.expenses;
 CREATE POLICY "Users can delete their own expenses" ON public.expenses
-  FOR DELETE USING (auth.uid()::text = user_id);
+  FOR DELETE USING (auth.uid()::text = "userId");
 
 -- ============================================
 -- 8. إضافة بيانات أولية (الفئات)
 -- ============================================
-INSERT INTO public.categories (id, name, icon, color, is_default, sort_order, type, is_active, name_normalized)
+INSERT INTO public.categories (id, name, icon, color, "isDefault")
 VALUES
-  ('cat-food', 'طعام', '🍽️', '#F59E0B', true, 1, 'default', true, 'طعام'),
-  ('cat-transport', 'مواصلات', '🚗', '#10B981', true, 2, 'default', true, 'مواصلات'),
-  ('cat-housing', 'سكن', '🏠', '#3B82F6', true, 3, 'default', true, 'سكن'),
-  ('cat-bills', 'فواتير وخدمات', '🧾', '#84CC16', true, 4, 'default', true, 'فواتير وخدمات'),
-  ('cat-health', 'صحة', '🏥', '#EF4444', true, 5, 'default', true, 'صحة'),
-  ('cat-education', 'تعليم ودورات', '📚', '#F97316', true, 6, 'default', true, 'تعليم ودورات'),
-  ('cat-entertainment', 'ترفيه', '🎉', '#8B5CF6', true, 7, 'default', true, 'ترفيه'),
-  ('cat-travel', 'سفر', '✈️', '#06B6D4', true, 8, 'default', true, 'سفر'),
-  ('cat-shopping', 'تسوق عام', '🛍️', '#EC4899', true, 9, 'default', true, 'تسوق عام'),
-  ('cat-other', 'أخرى', '❓', '#6B7280', true, 99, 'default', true, 'أخرى')
+  ('cat-food', 'طعام', '🍽️', '#F59E0B', true),
+  ('cat-transport', 'مواصلات', '🚗', '#10B981', true),
+  ('cat-housing', 'سكن', '🏠', '#3B82F6', true),
+  ('cat-bills', 'فواتير وخدمات', '🧾', '#84CC16', true),
+  ('cat-health', 'صحة', '🏥', '#EF4444', true),
+  ('cat-education', 'تعليم ودورات', '📚', '#F97316', true),
+  ('cat-entertainment', 'ترفيه', '🎉', '#8B5CF6', true),
+  ('cat-travel', 'سفر', '✈️', '#06B6D4', true),
+  ('cat-shopping', 'تسوق عام', '🛍️', '#EC4899', true),
+  ('cat-other', 'أخرى', '❓', '#6B7280', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================
 -- 9. إضافة الفئات الفرعية
 -- ============================================
-INSERT INTO public.subcategories (id, name, category_id)
+INSERT INTO public.subcategories (id, name, "categoryId")
 VALUES
   -- طعام
   ('sub-food-1', 'مطاعم', 'cat-food'),

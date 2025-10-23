@@ -74,9 +74,9 @@ export default function ExpensesListPage() {
     setLoading(true);
     setError(null);
     try {
-      // ✅ استخدام Prisma API مع منع التخزين المؤقت
-      console.log('🔄 جلب المصاريف من Prisma API...');
-      const response = await fetch(`/api/expenses?userId=${userId}&_=${Date.now()}`, {
+      // ✅ استخدام Supabase REST عبر Route Handler (لتفادي مشكلات Prisma/الحماية)
+      console.log('🔄 جلب المصاريف من Supabase REST API (server route)...');
+      const response = await fetch(`/api/expenses-supabase?userId=${userId}&_=${Date.now()}`, {
         cache: 'no-store',
         headers: {
           'Cache-Control': 'no-cache'
@@ -115,7 +115,7 @@ export default function ExpensesListPage() {
           console.warn('⚠️ Could not parse error JSON');
         }
         
-        if (parsedError?.message?.includes("Can't reach database")) {
+        if (parsedError?.message?.includes("Can't reach database") || parsedError?.code === 'FETCH_ERROR') {
           console.log('🔴 Database connection error detected');
           setError({
             type: 'database',
@@ -267,6 +267,27 @@ export default function ExpensesListPage() {
                 إضافة مصروف جديد
               </Button>
             </Link>
+            {/* زر إضافة مصروف تجريبي سريع */}
+            <Button
+              variant="outline"
+              onClick={async () => {
+                try {
+                  const res = await fetch('/api/expenses-supabase/demo', { cache: 'no-store' })
+                  if (!res.ok) {
+                    const t = await res.text()
+                    console.error('Demo insert failed:', res.status, t)
+                    alert('تعذر إضافة مصروف تجريبي: تأكد من تسجيل الدخول')
+                    return
+                  }
+                  await loadUser()
+                } catch (e) {
+                  console.error(e)
+                }
+              }}
+              className="border-amber-300 text-amber-700 hover:bg-amber-50"
+            >
+              إضافة مصروف تجريبي
+            </Button>
           </div>
 
           {/* Filters Card */}

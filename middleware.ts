@@ -17,6 +17,8 @@ const publicPaths = [
   '/auth/callback',
   '/auth/error',
   '/api/webhooks',
+  // إتاحة مسارات API الخاصة بالقراءة العامة من السيرفر فقط
+  '/api/expenses-supabase',
 ]
 
 function isPublicPath(pathname: string): boolean {

@@ -30,12 +30,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('expenses')
-      .select(`
-        *,
-        category:categories(*),
-        subcategory:subcategories(*),
-        user:users(*)
-      `, { count: 'exact' })
+      .select('*', { count: 'exact' })
       .eq('user_id', userId)
       .order('date', { ascending: false });
 
@@ -45,23 +40,45 @@ export async function GET(request: NextRequest) {
 
     query = query.range((page - 1) * limit, page * limit - 1);
 
-    const { data, error, count } = await query;
+    const { data: expenses, error, count } = await query;
 
     if (error) {
       console.error('❌ Supabase error:', error);
       throw new Error(error.message);
     }
 
-    console.log(`✅ [Supabase REST] تم العثور على ${data?.length || 0} مصروف`);
+    console.log(`✅ [Supabase REST] تم العثور على ${expenses?.length || 0} مصروف`);
+
+    // جلب الفئات والبنود لعمل join يدوي (لأنه قد لا توجد مفاتيح خارجية معرفة في القاعدة)
+    const [catRes, subcatRes] = await Promise.all([
+      supabase.from('categories').select('*'),
+      supabase.from('subcategories').select('*'),
+    ])
+
+    const categories = catRes.data || []
+    const subcategories = subcatRes.data || []
+    const catById = new Map(categories.map((c: any) => [c.id, c]))
+    const subById = new Map(subcategories.map((s: any) => [s.id, s]))
+
+    const enriched = (expenses || []).map((e: any) => {
+      const sub = e.subcategoryId ? subById.get(e.subcategoryId) : null
+      const cat = e.categoryId ? catById.get(e.categoryId) : (sub ? catById.get(sub.categoryId) : null)
+      return {
+        ...e,
+        subcategory: sub || null,
+        category: cat || null,
+        user: undefined,
+      }
+    })
 
     return NextResponse.json({
       ok: true,
-      data: data || [],
+      data: enriched,
       total: count || 0,
       page,
       limit,
       totalPages: Math.ceil((count || 0) / limit),
-      source: 'supabase-rest'
+      source: 'supabase-rest+join'
     });
 
   } catch (error) {
