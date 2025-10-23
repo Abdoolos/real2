@@ -19,6 +19,7 @@ const publicPaths = [
   '/api/webhooks',
   // إتاحة مسارات API الخاصة بالقراءة العامة من السيرفر فقط
   '/api/expenses-supabase',
+  '/api/expenses-supabase/demo',
 ]
 
 function isPublicPath(pathname: string): boolean {
