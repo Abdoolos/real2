@@ -551,9 +551,8 @@ export default function AddExpense() {
             logTelemetry('createExpense', 'success', Date.now() - submitStartTime);
             toast.success(`تم إضافة المصروف بنجاح: ${conversionResult.original.formatted}`);
             
-            // التوجيه لقائمة المصاريف مع إعادة التحميل الفوري
-            router.push("/expenses-list");
-            router.refresh();
+            // التوجيه لقائمة المصاريف مع معامل refresh لإعادة التحميل
+            router.push("/expenses-list?refresh=true");
 
         } catch (error) {
             logTelemetry('createExpense', 'error', Date.now() - submitStartTime);

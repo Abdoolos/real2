@@ -7,12 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Search, Edit2, Trash2, Plus, ArrowRight, Receipt } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { User } from '@/src/api/entities';
 
 export default function ExpensesListPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [currentUser, setCurrentUser] = useState(null);
   const [expenses, setExpenses] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -26,6 +27,29 @@ export default function ExpensesListPage() {
     // تحميل بيانات المستخدم أولاً
     loadUser();
   }, []);
+
+  // ✅ إعادة تحميل البيانات عند وجود معامل refresh
+  useEffect(() => {
+    if (searchParams.get('refresh') === 'true' && currentUser?.id) {
+      console.log('🔄 معامل refresh موجود - إعادة تحميل البيانات');
+      loadData(currentUser.id);
+      // إزالة المعامل من الـ URL
+      router.replace('/expenses-list', { scroll: false });
+    }
+  }, [searchParams, currentUser, router]);
+
+  // ✅ إعادة تحميل البيانات عند عودة الصفحة للظهور
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && currentUser?.id) {
+        console.log('👁️ الصفحة أصبحت مرئية - إعادة التحميل');
+        loadData(currentUser.id);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [currentUser]);
 
   const loadUser = async () => {
     try {
@@ -50,9 +74,14 @@ export default function ExpensesListPage() {
     setLoading(true);
     setError(null);
     try {
-      // ✅ استخدام Prisma API
+      // ✅ استخدام Prisma API مع منع التخزين المؤقت
       console.log('🔄 جلب المصاريف من Prisma API...');
-      const response = await fetch(`/api/expenses?userId=${userId}`);
+      const response = await fetch(`/api/expenses?userId=${userId}&_=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      });
       console.log('📡 Response status:', response.status);
       
       if (response.ok) {
