@@ -32,12 +32,12 @@ export async function GET(request: NextRequest) {
     let query = supabaseAdmin
       .from('expenses')
       .select('*', { count: 'exact' })
-      .eq('userId', userId)
+      .eq('user_id', userId)
       .order('date', { ascending: false });
 
-    if (familyId) query = query.eq('familyId', familyId);
-    if (categoryId) query = query.eq('categoryId', categoryId);
-    if (subcategoryId) query = query.eq('subcategoryId', subcategoryId);
+    if (familyId) query = query.eq('family_id', familyId);
+    if (categoryId) query = query.eq('category_id', categoryId);
+    if (subcategoryId) query = query.eq('subcategory_id', subcategoryId);
 
     query = query.range((page - 1) * limit, page * limit - 1);
 
@@ -62,8 +62,8 @@ export async function GET(request: NextRequest) {
     const subById = new Map(subcategories.map((s: any) => [s.id, s]))
 
     const enriched = (expenses || []).map((e: any) => {
-      const sub = e.subcategoryId ? subById.get(e.subcategoryId) : null
-      const cat = e.categoryId ? catById.get(e.categoryId) : (sub ? catById.get(sub.categoryId) : null)
+      const sub = e.subcategory_id ? subById.get(e.subcategory_id) : null
+      const cat = e.category_id ? catById.get(e.category_id) : (sub ? catById.get(sub.category_id) : null)
       return {
         ...e,
         subcategory: sub || null,
