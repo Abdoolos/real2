@@ -1,5 +1,5 @@
-import { createServerClient } from '@supabase/ssr'
-import { NextResponse, type NextRequest } from 'next/server'
+import { withAuth } from "next-auth/middleware"
+import { NextResponse } from "next/server"
 
 // المسارات العامة (لا تحتاج تسجيل دخول)
 const publicPaths = [
@@ -16,81 +16,44 @@ const publicPaths = [
   '/auth/google-signin',
   '/auth/callback',
   '/auth/error',
+  '/api/auth',
   '/api/webhooks',
-  // إتاحة مسارات API الخاصة بالقراءة العامة من السيرفر فقط
-  '/api/expenses-supabase',
-  '/api/expenses-supabase/demo',
 ]
 
 function isPublicPath(pathname: string): boolean {
   return publicPaths.some(path => pathname === path || pathname.startsWith(path))
 }
 
-export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  })
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
-        },
-        set(name: string, value: string, options: any) {
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-        },
-        remove(name: string, options: any) {
-          request.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
-        },
-      },
+export default withAuth(
+  function middleware(req) {
+    // إذا كان المسار عام، السماح بالمرور
+    if (isPublicPath(req.nextUrl.pathname)) {
+      return NextResponse.next()
     }
-  )
 
-  // تحديث الجلسة
-  const { data: { user } } = await supabase.auth.getUser()
+    // إذا لم يكن هناك token ولم يكن المسار عام، إعادة التوجيه لتسجيل الدخول
+    if (!req.nextauth.token) {
+      const redirectUrl = new URL('/auth/signin', req.url)
+      redirectUrl.searchParams.set('callbackUrl', req.nextUrl.pathname)
+      return NextResponse.redirect(redirectUrl)
+    }
 
-  // إذا كان المسار محمي ولا يوجد مستخدم، إعادة التوجيه لصفحة تسجيل الدخول
-  if (!isPublicPath(request.nextUrl.pathname) && !user) {
-    const redirectUrl = new URL('/auth/signin', request.url)
-    redirectUrl.searchParams.set('redirectTo', request.nextUrl.pathname)
-    return NextResponse.redirect(redirectUrl)
+    return NextResponse.next()
+  },
+  {
+    callbacks: {
+      authorized: ({ token, req }) => {
+        // السماح للمسارات العامة
+        if (isPublicPath(req.nextUrl.pathname)) {
+          return true
+        }
+        
+        // للمسارات المحمية، التحقق من وجود token
+        return !!token
+      },
+    },
   }
-
-  return response
-}
+)
 
 export const config = {
   matcher: [
