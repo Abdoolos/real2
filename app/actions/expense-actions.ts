@@ -2,13 +2,9 @@
 'use server'
 
 import { revalidateTag, revalidatePath } from 'next/cache';
-import { createClient } from '@supabase/supabase-js';
-
-// استخدام مفتاح الخدمة للتعامل مع قاعدة البيانات من السيرفر
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import connectToDatabase from '@/lib/mongodb/connection';
+import Expense from '@/lib/mongodb/models/Expense';
+import Subcategory from '@/lib/mongodb/models/Subcategory';
 
 export interface CreateExpenseData {
   family_id?: string | null;
@@ -28,33 +24,32 @@ export async function createExpenseAction(expenseData: CreateExpenseData) {
   try {
     console.log('🔄 Server Action: إنشاء مصروف جديد:', expenseData);
 
+    // الاتصال بقاعدة البيانات
+    await connectToDatabase();
+
     // إنشاء المصروف في قاعدة البيانات
-    const { data, error } = await supabaseAdmin
-      .from('expenses')
-      .insert([{
-        family_id: expenseData.family_id,
-        user_id: expenseData.user_id,
-        category_id: expenseData.category_id,
-        subcategory_id: expenseData.subcategory_id,
-        amount: expenseData.amount,
-        currency: expenseData.currency,
-        amount_in_sar: expenseData.amount_in_sar,
-        exchange_rate: expenseData.exchange_rate,
-        date: expenseData.date,
-        note: expenseData.note,
-        receipt_url: expenseData.receipt_url,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }])
-      .select('*')
-      .single();
+    const expenseDoc = new Expense({
+      family_id: expenseData.family_id,
+      user_id: expenseData.user_id,
+      category_id: expenseData.category_id,
+      subcategory_id: expenseData.subcategory_id,
+      amount: expenseData.amount,
+      currency: expenseData.currency,
+      amount_in_sar: expenseData.amount_in_sar,
+      exchange_rate: expenseData.exchange_rate,
+      date: new Date(expenseData.date),
+      note: expenseData.note,
+      receipt_url: expenseData.receipt_url,
+      created_at: new Date(),
+      updated_at: new Date()
+    });
 
-    if (error) {
-      console.error('❌ خطأ في إنشاء المصروف:', error);
-      throw new Error(`فشل في حفظ المصروف: ${error.message}`);
-    }
+    const savedExpense = await expenseDoc.save();
 
-    console.log('✅ تم إنشاء المصروف بنجاح:', data);
+    console.log('✅ تم إنشاء المصروف بنجاح:', savedExpense);
+
+    // تحديث عداد استخدام الفئة الفرعية
+    await updateSubcategoryUsage(expenseData.subcategory_id);
 
     // إبطال Cache للمصاريف
     console.log('🔄 إبطال Cache للمصاريف...');
@@ -74,7 +69,7 @@ export async function createExpenseAction(expenseData: CreateExpenseData) {
 
     return {
       success: true,
-      data: data,
+      data: savedExpense,
       message: 'تم حفظ المصروف بنجاح'
     };
 
@@ -92,29 +87,21 @@ export async function updateSubcategoryUsage(subcategoryId: string) {
   try {
     console.log('🔄 تحديث استخدام الفئة الفرعية:', subcategoryId);
 
-    // جلب العدد الحالي
-    const { data: current, error: fetchError } = await supabaseAdmin
-      .from('subcategories')
-      .select('usage_count')
-      .eq('id', subcategoryId)
-      .single();
+    // الاتصال بقاعدة البيانات
+    await connectToDatabase();
 
-    if (fetchError) {
+    // البحث عن الفئة الفرعية وتحديث عداد الاستخدام
+    const updatedSubcategory = await Subcategory.findByIdAndUpdate(
+      subcategoryId,
+      { 
+        $inc: { usage_count: 1 },
+        $set: { updated_at: new Date() }
+      },
+      { new: true, upsert: false }
+    );
+
+    if (!updatedSubcategory) {
       console.warn('⚠️ لم يتم العثور على الفئة الفرعية للتحديث');
-      return { success: false };
-    }
-
-    // تحديث العدد
-    const { error: updateError } = await supabaseAdmin
-      .from('subcategories')
-      .update({ 
-        usage_count: (current?.usage_count || 0) + 1,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', subcategoryId);
-
-    if (updateError) {
-      console.warn('⚠️ فشل في تحديث عداد الاستخدام:', updateError);
       return { success: false };
     }
 
