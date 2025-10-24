@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { expenseRepository } from '../../../src/server/repositories/expenseRepository';
-import { budgetService } from '../../../src/server/services/budgetService';
+import connectDB from '../../../lib/mongodb/connection';
+import { Expense, Category, Subcategory } from '../../../lib/mongodb/models';
 
 // Validation schemas
 const CreateExpenseSchema = z.object({
@@ -50,9 +50,10 @@ function successResponse(data: any, status: number = 200) {
 // GET /api/expenses - Get expenses with filters and pagination
 export async function GET(request: NextRequest) {
   let queryParams: any = {};
-  let filters: any = {};
   
   try {
+    await connectDB();
+    
     const { searchParams } = new URL(request.url);
     queryParams = Object.fromEntries(searchParams.entries());
 
@@ -79,25 +80,57 @@ export async function GET(request: NextRequest) {
       familyId,
     } = validationResult.data;
 
-    // Build filters
-    filters = {
-      userId,
-      familyId,
-      categoryId,
-      subcategoryId,
-      ...(startDate && { startDate: new Date(startDate) }),
-      ...(endDate && { endDate: new Date(endDate) }),
-      minAmount,
-      maxAmount,
-    };
+    // Build MongoDB filters
+    const mongoFilters: any = {};
+    
+    if (userId) mongoFilters.userId = userId;
+    if (familyId) mongoFilters.familyId = familyId;
+    if (categoryId) mongoFilters.categoryId = categoryId;
+    if (subcategoryId) mongoFilters.subcategoryId = subcategoryId;
+    
+    if (startDate || endDate) {
+      mongoFilters.date = {};
+      if (startDate) mongoFilters.date.$gte = new Date(startDate);
+      if (endDate) mongoFilters.date.$lte = new Date(endDate);
+    }
+    
+    if (minAmount || maxAmount) {
+      mongoFilters.amount = {};
+      if (minAmount) mongoFilters.amount.$gte = minAmount;
+      if (maxAmount) mongoFilters.amount.$lte = maxAmount;
+    }
 
-    // Get expenses
-    const result = await expenseRepository.findMany(filters, {
-      page,
-      limit: Math.min(limit, 100), // Max 100 items per page
-      orderBy,
-      orderDirection,
-    });
+    // Build sort options
+    const sortOptions: any = {};
+    sortOptions[orderBy] = orderDirection === 'desc' ? -1 : 1;
+
+    // Calculate pagination
+    const skip = (page - 1) * limit;
+    const actualLimit = Math.min(limit, 100); // Max 100 items per page
+
+    // Get expenses with populated fields
+    const expenses = await Expense.find(mongoFilters)
+      .populate('categoryId', 'name icon color')
+      .populate('subcategoryId', 'name')
+      .sort(sortOptions)
+      .skip(skip)
+      .limit(actualLimit);
+
+    // Get total count for pagination
+    const totalCount = await Expense.countDocuments(mongoFilters);
+    const totalPages = Math.ceil(totalCount / actualLimit);
+
+    const result = {
+      expenses,
+      pagination: {
+        page,
+        limit: actualLimit,
+        totalCount,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
+      }
+    };
 
     return successResponse(result);
 
@@ -107,7 +140,6 @@ export async function GET(request: NextRequest) {
       message: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
       name: error instanceof Error ? error.name : undefined,
-      filters,
       queryParams
     });
     return errorResponse(
@@ -123,6 +155,8 @@ export async function POST(request: NextRequest) {
   let body: any = {};
   
   try {
+    await connectDB();
+    
     body = await request.json();
 
     // Validate request body
@@ -135,48 +169,24 @@ export async function POST(request: NextRequest) {
 
     const { amount, description, categoryId, subcategoryId, date, notes, userId, familyId } = validationResult.data;
 
-    // Check budget before creating expense
-    const budgetValidation = await budgetService.validateExpenseAgainstBudget(
+    // Create expense
+    const expense = await Expense.create({
       amount,
-      categoryId,
-      userId,
-      familyId
-    );
-
-    if (!budgetValidation.allowed) {
-      return errorResponse(
-        budgetValidation.warning || 'هذا المصروف سيتجاوز حد الميزانية',
-        'BUDGET_EXCEEDED',
-        400
-      );
-    }
-
-    // Create expense - استخدام category من subcategory
-    const expense = await expenseRepository.create({
-      amount: amount as any,
       description,
-      categoryId, // سيتم ملؤه تلقائياً من subcategory
+      categoryId,
       subcategoryId: subcategoryId || null,
       date: new Date(date),
       notes: notes || null,
       userId,
       familyId: familyId || null,
-      billId: null,
     });
 
-    // Get expense with details for response
-    const expenseWithDetails = await expenseRepository.findById(expense.id);
+    // Get expense with populated fields for response
+    const expenseWithDetails = await Expense.findById(expense._id)
+      .populate('categoryId', 'name icon color')
+      .populate('subcategoryId', 'name');
 
-    // Prepare response with budget warning if applicable
-    const responseData = {
-      expense: expenseWithDetails,
-      ...(budgetValidation.warning && {
-        budgetWarning: budgetValidation.warning,
-        budgetInfo: budgetValidation.budgetInfo,
-      }),
-    };
-
-    return successResponse(responseData, 201);
+    return successResponse(expenseWithDetails, 201);
 
   } catch (error) {
     console.error('❌ Error creating expense:', error);
