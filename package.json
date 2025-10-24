@@ -9,7 +9,6 @@
     "start": "next start",
     "lint": "next lint",
     "export": "next export",
-    "db:apply:supabase": "node scripts/run-supabase-schema.js",
     "biome:check": "biome check .",
     "biome:format": "biome format --write .",
     "biome:lint": "biome lint .",
