@@ -1,34 +1,36 @@
 'use client'
 
 import { useEffect } from 'react'
+import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 
 export default function GoogleSignInPage() {
   const router = useRouter()
-  const supabase = createClient()
 
   useEffect(() => {
     const signInWithGoogle = async () => {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        },
-      })
+      try {
+        // استخدام NextAuth بدلاً من Supabase للمصادقة بـ Google
+        const result = await signIn('google', {
+          callbackUrl: '/dashboard',
+          redirect: false
+        })
 
-      if (error) {
-        console.error('خطأ في تسجيل الدخول بـ Google:', error.message)
-        router.push('/auth/signin')
+        if (result?.error) {
+          console.error('خطأ في تسجيل الدخول بـ Google:', result.error)
+          router.push('/auth/signin?error=AuthenticationFailed')
+        } else if (result?.url) {
+          // إذا نجح تسجيل الدخول، انتقل للصفحة المطلوبة
+          router.push(result.url)
+        }
+      } catch (error) {
+        console.error('خطأ غير متوقع:', error)
+        router.push('/auth/signin?error=UnexpectedError')
       }
     }
 
     signInWithGoogle()
-  }, [router, supabase])
+  }, [router])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-amber-50">
